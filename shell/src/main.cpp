@@ -10,7 +10,6 @@
 #include "startmenu/startmenu.h"
 #include "bsod/bsod.h"
 
-#include <unistd.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
@@ -83,7 +82,7 @@ int main() {
     std::atomic<bool> running(true);
     std::thread clock_thread([&](){
         while (running) {
-            sleep(1);
+            std::this_thread::sleep_for(std::chrono::seconds(1));
 std::vector<TaskEntry> task_list_init;
 for (const auto& mw : wm.get_tasks()) {
     task_list_init.push_back({mw.client, mw.frame, mw.title, false});

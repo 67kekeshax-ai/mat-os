@@ -4,6 +4,7 @@
 #include <ctime>
 #include <cstring>
 #include <cstdio>
+#include <cstdint>
 
 unsigned long Taskbar::alloc_color(uint8_t r, uint8_t g, uint8_t b) {
     XColor c{};

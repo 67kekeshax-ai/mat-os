@@ -43,7 +43,7 @@ apt-get install -y --no-install-recommends \
     locales \
     grub-pc \
     xserver-xorg-input-libinput \
-    xserver-xorg-input-vmmouse
+    open-vm-tools-desktop
 apt-get clean
 EOF
 

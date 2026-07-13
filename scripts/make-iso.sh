@@ -49,16 +49,6 @@ EOF
 chmod +x "$CHROOT_DIR/tmp/pkgs.sh"
 chroot "$CHROOT_DIR" /tmp/pkgs.sh
 
-# Создаем файл автозапуска
-cat << 'EOF' > "$CHROOT_DIR/home/user/.bash_profile"
-if [ -z "$DISPLAY" ] && [ "$XDG_VTNR" -eq 1 ]; then
-  exec startx
-fi
-EOF
-
-# Выставляем правильные права
-chroot "$CHROOT_DIR" chown user:user /home/user/.bash_profile
-
 # ─── Копирование компонентов MAT OS ─────────────────────────────────────
 log "Копирование MAT OS бинарей..."
 cp /usr/local/bin/matos-installer "$CHROOT/usr/local/bin/" 2>/dev/null || true

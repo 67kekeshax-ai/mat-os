@@ -98,7 +98,7 @@ int main() {
         if (start_menu.handle_event(ev)) {
             std::vector<TaskEntry> task_list;
 for (const auto& mw : wm.get_tasks()) {
-    task_list.push_back({mw.window, mw.frame, mw.title, mw.active});
+    task_list.push_back({mw.client, mw.frame, mw.title, false});
 }
 taskbar.draw(task_list);
             continue;
@@ -121,7 +121,7 @@ taskbar.draw(task_list);
             }
             std::vector<TaskEntry> task_list_update;
 for (const auto& mw : wm.get_tasks()) {
-    task_list_update.push_back({mw.window, mw.frame, mw.title, mw.active});
+    task_list_update.push_back({mw.client, mw.frame, mw.title, false});
 }
 taskbar.draw(task_list_update);
             continue;

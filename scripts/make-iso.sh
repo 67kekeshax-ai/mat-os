@@ -41,13 +41,25 @@ apt-get install -y --no-install-recommends \
     parted e2fsprogs dosfstools \
     debootstrap \
     locales \
-    xserver-xorg-input-libinput \
-    grub-pc 
+    grub-pc \
+    xserver-xorg-input-libinput 
 apt-get clean
 EOF
 
 chmod +x "$CHROOT_DIR/tmp/pkgs.sh"
 chroot "$CHROOT_DIR" /tmp/pkgs.sh
+
+# Создаем файл автозапуска графики
+cat << 'EOF' > "$CHROOT_DIR/home/user/.bash_profile"
+if [ -z "$DISPLAY" ] && [ "$XDG_VTNR" -eq 1 ]; then
+  exec startx
+fi
+EOF
+
+# Даем права пользователю user
+chroot "$CHROOT_DIR" chown user:user /home/user/.bash_profile
+
+rm -rf "$CHROOT_DIR/tmp/pkgs.sh"
 
 # ─── Копирование компонентов MAT OS ─────────────────────────────────────
 log "Копирование MAT OS бинарей..."

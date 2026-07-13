@@ -46,20 +46,20 @@ apt-get install -y --no-install-recommends \
 apt-get clean
 EOF
 
-chmod +x "$CHROOT_DIR/tmp/pkgs.sh"
-chroot "$CHROOT_DIR" /tmp/pkgs.sh
+chmod +x "$CHROOT/tmp/pkgs.sh"
+chroot "$CHROOT" /tmp/pkgs.sh
 
 # Создаем файл автозапуска графики
-cat << 'EOF' > "$CHROOT_DIR/home/user/.bash_profile"
+cat << 'EOF' > "$CHROOT/home/user/.bash_profile"
 if [ -z "$DISPLAY" ] && [ "$XDG_VTNR" -eq 1 ]; then
   exec startx
 fi
 EOF
 
 # Даем права пользователю user
-chroot "$CHROOT_DIR" chown user:user /home/user/.bash_profile
+chroot "$CHROOT" chown user:user /home/user/.bash_profile
 
-rm -rf "$CHROOT_DIR/tmp/pkgs.sh"
+rm -rf "$CHROOT/tmp/pkgs.sh"
 # ─── Копирование компонентов MAT OS ─────────────────────────────────────
 log "Копирование MAT OS бинарей..."
 cp /usr/local/bin/matos-installer "$CHROOT/usr/local/bin/" 2>/dev/null || true

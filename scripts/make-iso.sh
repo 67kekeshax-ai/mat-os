@@ -41,6 +41,7 @@ apt-get install -y --no-install-recommends \
     parted e2fsprogs dosfstools \
     debootstrap \
     locales \
+    xserver-xorg-input-vmmouse \
     grub-pc 
 apt-get clean
 EOF

@@ -40,7 +40,7 @@ apt-get install -y --no-install-recommends \
     bash coreutils util-linux \
     parted e2fsprogs dosfstools \
     debootstrap \
-    grub-pc grub-efi-amd64
+    grub-pc \
 apt-get clean
 EOF
 chmod +x "$CHROOT/tmp/pkgs.sh"

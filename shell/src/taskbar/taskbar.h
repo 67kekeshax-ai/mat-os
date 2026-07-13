@@ -1,8 +1,9 @@
 #pragma once
+#include <cstdint>
 #include <X11/Xlib.h>
 #include <string>
 #include <vector>
-#include <cstdint>
+
 
 struct TaskEntry {
     Window window;

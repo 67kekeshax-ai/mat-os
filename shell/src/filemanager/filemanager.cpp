@@ -13,6 +13,8 @@
 #include <algorithm>
 #include <climits>
 
+using std::uint8_t;
+
 unsigned long FileManager::alloc_color(uint8_t r, uint8_t g, uint8_t b) {
     XColor c{};
     c.red=r*257; c.green=g*257; c.blue=b*257;

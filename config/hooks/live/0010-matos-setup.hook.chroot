@@ -1,0 +1,59 @@
+#!/bin/bash
+# MAT OS live-build hook: настройка системы в chroot
+set -euo pipefail
+
+# ─── Локаль ───────────────────────────────────────────────────────────────
+echo "ru_RU.UTF-8 UTF-8" >> /etc/locale.gen
+echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
+locale-gen
+echo "LANG=ru_RU.UTF-8" > /etc/locale.conf
+
+# ─── Временная зона ────────────────────────────────────────────────────────
+ln -sf /usr/share/zoneinfo/Europe/Moscow /etc/localtime
+
+# ─── Live-пользователь ────────────────────────────────────────────────────
+useradd -m -s /bin/bash user 2>/dev/null || true
+echo "user:live" | chpasswd
+usermod -aG sudo user
+usermod -aG video,audio,input user
+
+# ─── Сервисный пользователь для login-экрана ─────────────────────────────
+useradd -r -s /usr/local/bin/matos-login matos_login 2>/dev/null || true
+
+# ─── xinitrc ───────────────────────────────────────────────────────────────
+cat > /home/user/.xinitrc << 'XINITRC'
+#!/bin/sh
+# MAT OS — запуск рабочего стола
+exec /usr/local/bin/matos-shell
+XINITRC
+chown user:user /home/user/.xinitrc
+chmod +x /home/user/.xinitrc
+
+# ─── Автологин через getty ─────────────────────────────────────────────────
+mkdir -p /etc/systemd/system/getty@tty1.service.d
+cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf << 'AUTOLOGIN'
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin matos_login --noclear %I $TERM
+AUTOLOGIN
+
+# ─── Sudoers ───────────────────────────────────────────────────────────────
+echo "%sudo ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers.d/matos
+chmod 440 /etc/sudoers.d/matos
+
+# ─── NetworkManager ────────────────────────────────────────────────────────
+systemctl enable NetworkManager 2>/dev/null || true
+systemctl disable networking 2>/dev/null || true
+
+# ─── Редакция ─────────────────────────────────────────────────────────────
+echo "EDITION=MAT OS HOME (Live)" > /etc/matos-edition
+echo "KEY=12006769"               >> /etc/matos-edition
+
+# ─── Разрешения на framebuffer ────────────────────────────────────────────
+cat > /etc/udev/rules.d/99-framebuffer.rules << 'UDEV'
+SUBSYSTEM=="graphics", KERNEL=="fb[0-9]*", MODE="0660", GROUP="video"
+UDEV
+
+usermod -aG video matos_login 2>/dev/null || true
+
+echo "MAT OS live hook завершён."

@@ -1,0 +1,48 @@
+# MAT OS — список пакетов для live-build
+# Устанавливаются в live-образ
+
+# Ядро
+linux-image-amd64
+live-boot
+live-boot-initramfs-tools
+
+# Графика
+xorg
+xinit
+x11-xserver-utils
+x11-utils
+xterm
+
+# Сеть
+network-manager
+net-tools
+wireless-tools
+wpasupplicant
+
+# Firmware
+firmware-linux-free
+firmware-misc-nonfree
+
+# Шрифты
+fonts-dejavu-core
+fonts-dejavu-extra
+
+# Утилиты
+sudo
+passwd
+bash
+coreutils
+util-linux
+procps
+less
+nano
+curl
+wget
+
+# Разметка дисков (для установщика)
+parted
+e2fsprogs
+dosfstools
+debootstrap
+grub-pc
+grub-efi-amd64

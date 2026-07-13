@@ -1,0 +1,6 @@
+# MAT OS — Базовая конфигурация сети
+# Управление сетью осуществляется через NetworkManager (nm-applet).
+# Этот файл — только для loopback.
+
+auto lo
+iface lo inet loopback

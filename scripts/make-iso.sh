@@ -48,18 +48,8 @@ EOF
 
 chmod +x "$CHROOT/tmp/pkgs.sh"
 chroot "$CHROOT" /tmp/pkgs.sh
-
-# Создаем файл автозапуска графики
-cat << 'EOF' > "$CHROOT/home/user/.bash_profile"
-if [ -z "$DISPLAY" ] && [ "$XDG_VTNR" -eq 1 ]; then
-  exec startx
-fi
-EOF
-
-# Даем права пользователю user
-chroot "$CHROOT" chown user:user /home/user/.bash_profile
-
 rm -rf "$CHROOT/tmp/pkgs.sh"
+
 # ─── Копирование компонентов MAT OS ─────────────────────────────────────
 log "Копирование MAT OS бинарей..."
 cp /usr/local/bin/matos-installer "$CHROOT/usr/local/bin/" 2>/dev/null || true
@@ -115,6 +105,14 @@ cat > "$CHROOT/etc/systemd/system/getty@tty1.service.d/autologin.conf" << 'AUTOL
 ExecStart=
 ExecStart=-/sbin/agetty --autologin matos_login --noclear %I $TERM
 AUTOLOGIN
+# Создаем файл автозапуска графики
+cat << 'EOF' > "$CHROOT/home/user/.bash_profile"
+if [ -z "$DISPLAY" ] && [ "$XDG_VTNR" -eq 1 ]; then
+  exec startx
+fi
+EOF
+# Даем права пользователю user
+chroot "$CHROOT" chown user:user /home/user/.bash_profile
 
 # NetworkManager
 chroot "$CHROOT" systemctl enable NetworkManager 2>/dev/null || true

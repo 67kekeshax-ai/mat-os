@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <cstdint>
 
+using std::uint8_t;
+
 // ─── Цвета (ARGB упакован как XColor через XAllocColor) ───────────────────
 static unsigned long color(Display* dpy, int screen,
                            uint8_t r, uint8_t g, uint8_t b) {

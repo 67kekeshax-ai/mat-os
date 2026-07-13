@@ -40,6 +40,7 @@ apt-get install -y --no-install-recommends \
     bash coreutils util-linux \
     parted e2fsprogs dosfstools \
     debootstrap \
+    locales \
     grub-pc 
 apt-get clean
 EOF

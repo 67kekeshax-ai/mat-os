@@ -1,6 +1,7 @@
 #include "startmenu.h"
 #include "../taskbar/taskbar.h"
 
+#include <unistd.h>
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
 #include <cstdlib>

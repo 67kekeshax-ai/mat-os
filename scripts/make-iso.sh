@@ -49,12 +49,15 @@ EOF
 chmod +x "$CHROOT/tmp/pkgs.sh"
 chroot "$CHROOT" /tmp/pkgs.sh
 
-# Настройка автозапуска графики для пользователя user
+# Создаем файл автозапуска
 cat << 'EOF' > "$CHROOT/home/user/.bash_profile"
 if [ -z "$DISPLAY" ] && [ "$XDG_VTNR" -eq 1 ]; then
   exec startx
 fi
 EOF
+
+# Выставляем правильные права
+chroot "$CHROOT" chown user:user /home/user/.bash_profile
 
 # Выставляем правильного владельца файла
 chroot "$CHROOT" chown user:user /home/user/.bash_profile

@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <cstdint>
 
 // Экран входа на framebuffer.
 // Показывает часы, аватар, поле пароля.

@@ -103,15 +103,10 @@ mkdir -p "$CHROOT/etc/systemd/system/getty@tty1.service.d"
 cat > "$CHROOT/etc/systemd/system/getty@tty1.service.d/autologin.conf" << 'AUTOLOGIN'
 [Service]
 ExecStart=
-ExecStart=-/sbin/agetty --autologin matos_login --noclear %I $TERM
+ExecStart=-/sbin/agetty --autologin user --noclear %I $TERM
 AUTOLOGIN
-# Создаем файл автозапуска графики
-cat << 'EOF' > "$CHROOT/home/user/.bash_profile"
-if [ -z "$DISPLAY" ] && [ "$XDG_VTNR" -eq 1 ]; then
-  exec startx
-fi
-EOF
-# Даем права пользователю user
+# Добавляем автоматический старт иксов для пользователя user
+echo "exec startx" >> "$CHROOT/home/user/.bash_profile"
 chroot "$CHROOT" chown user:user /home/user/.bash_profile
 
 # NetworkManager

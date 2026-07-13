@@ -1,3 +1,4 @@
+#include <cstdint>
 #pragma once
 #include <string>
 #include <vector>

@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+using std::uint8_t;
 #include <X11/Xlib.h>
 #include <string>
 #include <vector>

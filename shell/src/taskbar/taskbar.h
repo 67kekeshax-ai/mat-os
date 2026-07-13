@@ -55,5 +55,5 @@ private:
     unsigned long m_color_text;
     unsigned long m_color_hover;
 
-    unsigned long alloc_color(uint8_t r, uint8_t g, uint8_t b);
+    unsigned long alloc_color(std::uint8_t r, std::uint8_t g, std::uint8_t b);
 };

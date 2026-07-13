@@ -155,7 +155,7 @@ bool run_login_screen(const std::string& username) {
             // Часы
             time_t now = time(nullptr);
             struct tm* t = localtime(&now);
-            char tbuf[16], dbuf[16];
+            char tbuf[64], dbuf[64];
             snprintf(tbuf,sizeof(tbuf),"%02d:%02d", t->tm_hour, t->tm_min);
             snprintf(dbuf,sizeof(dbuf),"%02d/%02d/%04d",
                      t->tm_mday, t->tm_mon+1, t->tm_year+1900);

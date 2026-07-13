@@ -42,7 +42,8 @@ apt-get install -y --no-install-recommends \
     debootstrap \
     locales \
     grub-pc \
-    xserver-xorg-input-libinput 
+    xserver-xorg-input-libinput \
+    xserver-xorg-input-vmmouse
 apt-get clean
 EOF
 

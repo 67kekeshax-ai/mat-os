@@ -96,7 +96,11 @@ int main() {
 
         // Меню Пуск
         if (start_menu.handle_event(ev)) {
-            taskbar.draw(wm.get_tasks());
+            std::vector<TaskEntry> task_list;
+for (const auto& mw : wm.get_tasks()) {
+    task_list.push_back({mw.window, mw.frame, mw.title, mw.active});
+}
+taskbar.draw(task_list);
             continue;
         }
 
@@ -115,7 +119,11 @@ int main() {
                                    RevertToPointerRoot, CurrentTime);
                 }
             }
-            taskbar.draw(wm.get_tasks());
+            std::vector<TaskEntry> task_list_update;
+for (const auto& mw : wm.get_tasks()) {
+    task_list_update.push_back({mw.window, mw.frame, mw.title, mw.active});
+}
+taskbar.draw(task_list_update);
             continue;
         }
 

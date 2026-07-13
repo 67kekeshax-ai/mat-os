@@ -5,6 +5,7 @@
 #include <cstring>
 #include <cstdio>
 #include <algorithm>
+#include <cstdint>
 
 // ─── Цвета (ARGB упакован как XColor через XAllocColor) ───────────────────
 static unsigned long color(Display* dpy, int screen,

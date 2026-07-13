@@ -1,10 +1,3 @@
-#define BG_R 0
-#define BG_G 0
-#define BG_B 170
-#define FG_R 255
-#define FG_G 255
-#define FG_B 255
-
 #include <cstdint>
 using std::uint8_t;
 

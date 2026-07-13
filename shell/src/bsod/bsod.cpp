@@ -5,6 +5,9 @@
 #define FG_G 255
 #define FG_B 255
 
+#include <cstdint>
+using std::uint8_t;
+
 #include "bsod.h"
 
 #include <cstdio>

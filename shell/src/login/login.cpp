@@ -1,5 +1,7 @@
 #include "login.h"
 
+#include <cstdint>
+using std::uint8_t;
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>

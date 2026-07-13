@@ -60,7 +60,6 @@ EOF
 chroot "$CHROOT_DIR" chown user:user /home/user/.bash_profile
 
 rm -rf "$CHROOT_DIR/tmp/pkgs.sh"
-
 # ─── Копирование компонентов MAT OS ─────────────────────────────────────
 log "Копирование MAT OS бинарей..."
 cp /usr/local/bin/matos-installer "$CHROOT/usr/local/bin/" 2>/dev/null || true

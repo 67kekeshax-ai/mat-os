@@ -1,18 +1,297 @@
-name: Build ISO
-on: [push, workflow_dispatch]
+name: Build MAT OS ISO
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Триггеры:
+#   • push в ветку main/master  → сборка + артефакт
+#   • pull_request               → сборка (без публикации)
+#   • workflow_dispatch          → запуск вручную по кнопке (можно выбрать редакцию)
+#   • push тега v*               → сборка + GitHub Release с прикреплённым ISO
+# ──────────────────────────────────────────────────────────────────────────────
+on:
+  push:
+    branches: [main, master]
+    tags:     ["v*"]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      edition:
+        description: "Редакция MAT OS"
+        required: true
+        default: "HOME"
+        type: choice
+        options: [HOME, PRO]
+      debug_shell:
+        description: "Включить tmate (SSH в раннер для отладки)"
+        required: false
+        default: "false"
+        type: boolean
+
+# Только одна сборка одновременно на ветку (отменяем устаревшие)
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build-os:
-    runs-on: ubuntu-latest
+  build-iso:
+    name: Build MAT OS ISO
+    runs-on: ubuntu-24.04          # Debian Bookworm совместим с Ubuntu 24.04
+
+    env:
+      DEBIAN_MIRROR: http://deb.debian.org/debian
+      CHROOT_DIR: /tmp/matos-chroot
+      ISO_PATH: ${{ github.workspace }}/output/matos.iso
+
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Run Build Script
+      # ── 1. Код репозитория ──────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── 2. Опциональный SSH-шелл для отладки ───────────────────────────
+      - name: Setup tmate (debug SSH)
+        if: ${{ github.event.inputs.debug_shell == 'true' }}
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true
+
+      # ── 3. Кэш debootstrap chroot (~400 МБ, экономит 8-10 мин) ─────────
+      - name: Cache debootstrap chroot
+        id: cache-chroot
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CHROOT_DIR }}
+          key: chroot-bookworm-${{ hashFiles('scripts/make-iso.sh') }}
+          restore-keys: |
+            chroot-bookworm-
+
+      # ── 4. Системные зависимости для сборки ISO ─────────────────────────
+      - name: Install build dependencies
         run: |
-          chmod +x scripts/build.sh
-          sudo ./scripts/build.sh
-          
-      - name: Upload Result
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends \
+            build-essential g++ make \
+            libx11-dev libxext-dev libcrypt-dev \
+            debootstrap \
+            squashfs-tools \
+            xorriso \
+            mtools \
+            grub-pc-bin \
+            grub-efi-amd64-bin \
+            grub2-common \
+            parted \
+            dosfstools \
+            e2fsprogs \
+            imagemagick \
+            ovmf \
+            isolinux
+
+      # ── 5. Сборка C++: установщик ───────────────────────────────────────
+      - name: Build matos-installer
+        working-directory: installer
+        run: |
+          make -j$(nproc)
+          sudo install -Dm755 matos-installer /usr/local/bin/matos-installer
+          echo "✓ matos-installer собран: $(file /usr/local/bin/matos-installer)"
+
+      # ── 6. Сборка C++: оболочка + логин ────────────────────────────────
+      - name: Build matos-shell and matos-login
+        working-directory: shell
+        run: |
+          make -j$(nproc)
+          sudo install -Dm755 matos-shell /usr/local/bin/matos-shell
+          sudo install -Dm755 matos-login  /usr/local/bin/matos-login
+          echo "✓ matos-shell:  $(file /usr/local/bin/matos-shell)"
+          echo "✓ matos-login:  $(file /usr/local/bin/matos-login)"
+
+      # ── 7. Графические ресурсы (обои + иконка Пуска) ───────────────────
+      - name: Generate assets via ImageMagick
+        run: |
+          sudo mkdir -p /opt/matos-shell/assets
+
+          sudo convert -size 1920x1080 \
+            gradient:"#032D60-#0078D7" \
+            /opt/matos-shell/assets/wallpaper.png
+
+          sudo convert -size 48x48 xc:none \
+            -fill '#F65314' -draw 'rectangle 2,2 22,22'   \
+            -fill '#7CBB00' -draw 'rectangle 26,2 46,22'  \
+            -fill '#00A1F1' -draw 'rectangle 2,26 22,46'  \
+            -fill '#FFBB00' -draw 'rectangle 26,26 46,46' \
+            /opt/matos-shell/assets/start_button.png
+
+          echo "✓ Ресурсы сгенерированы"
+          ls -lh /opt/matos-shell/assets/
+
+      # ── 8. Вспомогательные скрипты ──────────────────────────────────────
+      - name: Install helper scripts
+        run: |
+          sudo install -Dm755 \
+            config/matos-install-start.sh \
+            /usr/local/bin/matos-install-start
+
+          sudo install -Dm755 \
+            config/includes.chroot/opt/matos-shell/matos-settings.sh \
+            /opt/matos-shell/matos-settings.sh
+
+      # ── 9. Подготовка BUILD_DIR с кэшированным chroot ──────────────────
+      - name: Prepare build directory
+        run: |
+          mkdir -p .build
+          if [[ -d "${{ env.CHROOT_DIR }}/usr" ]]; then
+            echo "♻️  Используем кэшированный chroot"
+            sudo ln -sfn "${{ env.CHROOT_DIR }}" .build/chroot
+          else
+            echo "🆕  Chroot будет создан заново"
+            sudo mkdir -p "${{ env.CHROOT_DIR }}"
+            sudo ln -sfn "${{ env.CHROOT_DIR }}" .build/chroot
+          fi
+
+      # ── 10. Xorg input config: VMware mouse + libinput ──────────────────
+      - name: Create Xorg VMware input config
+        run: |
+          mkdir -p config/xorg.conf.d
+
+          if [[ ! -f config/xorg.conf.d/70-input.conf ]]; then
+            cat > config/xorg.conf.d/70-input.conf << 'XCONF'
+          Section "InputClass"
+              Identifier  "VMware vmmouse"
+              MatchProduct "VMware VMPS2Mouse|VMware Mouse"
+              MatchDevicePath "/dev/input/event*"
+              Driver      "vmmouse"
+          EndSection
+          Section "InputClass"
+              Identifier  "libinput pointer"
+              MatchIsPointer "on"
+              Driver      "libinput"
+          EndSection
+          Section "InputClass"
+              Identifier  "libinput keyboard"
+              MatchIsKeyboard "on"
+              Driver      "libinput"
+              Option      "XkbLayout" "us,ru"
+              Option      "XkbOptions" "grp:alt_shift_toggle"
+          EndSection
+          XCONF
+          fi
+
+          cat > config/xorg.conf.d/40-vmmouse.conf << 'XCONF'
+          Section "InputDevice"
+              Identifier "VMware Mouse"
+              Driver     "vmmouse"
+              Option     "Device" "/dev/input/mice"
+          EndSection
+          XCONF
+
+          echo "✓ Xorg VMware конфиги готовы:"
+          ls -1 config/xorg.conf.d/
+
+      # ── 11. ГЛАВНАЯ СБОРКА: make-iso.sh ─────────────────────────────────
+      - name: Build MAT OS ISO
+        run: |
+          chmod +x scripts/make-iso.sh
+          mkdir -p output
+
+          sudo --preserve-env=HOME \
+            bash scripts/make-iso.sh
+
+          echo ""
+          echo "════════════════════════════════════════════════════"
+          echo "  ISO собран успешно!"
+          ls -lh output/matos.iso
+          echo "════════════════════════════════════════════════════"
+
+      # ── 12. Проверка ISO ────────────────────────────────────────────────
+      - name: Verify ISO integrity
+        run: |
+          ISO="output/matos.iso"
+          echo "Размер:    $(du -sh $ISO | cut -f1)"
+          echo "Тип:       $(file $ISO)"
+          echo "SHA-256:   $(sha256sum $ISO | awk '{print $1}')"
+
+          if file "$ISO" | grep -qi "ISO 9660\|bootable"; then
+            echo "✓ ISO прошёл проверку"
+          else
+            echo "⚠️  Предупреждение: тип файла не опознан как ISO 9660"
+          fi
+
+          sha256sum "$ISO" > output/matos.iso.sha256
+          echo "SHA-256 сохранён в output/matos.iso.sha256"
+
+      # ── 13. Загрузка ISO как артефакт Actions ───────────────────────────
+      - name: Upload ISO artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MAT-OS-ISO
-          path: "**/*.iso"
+          name: matos-iso-${{ github.sha }}
+          path: |
+            output/matos.iso
+            output/matos.iso.sha256
+          retention-days: 14
+          compression-level: 0
+
+      # ── 14. GitHub Release (только при пуше тега v*) ────────────────────
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "MAT OS ${{ github.ref_name }}"
+          body: |
+            ## MAT OS ${{ github.ref_name }}
+
+            ### Как использовать
+            1. Скачайте `matos.iso`
+            2. Проверьте контрольную сумму: `sha256sum -c matos.iso.sha256`
+            3. Запустите в QEMU:
+               ```bash
+               qemu-system-x86_64 \
+                 -enable-kvm \
+                 -m 2G \
+                 -vga vmware \
+                 -cdrom matos.iso \
+                 -boot d
+               ```
+            4. Или запишите на USB: `sudo dd if=matos.iso of=/dev/sdX bs=4M status=progress`
+
+            ### Редакции и ключи
+            | Редакция | Ключ |
+            |----------|------|
+            | HOME     | `12006769` |
+            | PRO      | `67691200` |
+
+            ### Системные требования
+            | | Минимум | Рекомендуется |
+            |-|---------|---------------|
+            | CPU | x86-64, 1 ядро | 2+ ядра, KVM |
+            | RAM | 512 МБ | 2 ГБ |
+            | Диск | 4 ГБ | 20 ГБ |
+            | Видео | VGA/VESA | VMware SVGA |
+
+            ---
+            Собрано из коммита: `${{ github.sha }}`
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+          files: |
+            output/matos.iso
+            output/matos.iso.sha256
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 15. Итоговый отчёт ──────────────────────────────────────────────
+      - name: Build summary
+        if: always()
+        run: |
+          echo "## MAT OS Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Параметр | Значение |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|----------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Коммит | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Ветка/тег | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Раннер | ${{ runner.os }} ${{ runner.arch }} |" >> $GITHUB_STEP_SUMMARY
+
+          if [[ -f output/matos.iso ]]; then
+            SIZE=$(du -sh output/matos.iso | cut -f1)
+            SHA=$(sha256sum output/matos.iso | awk '{print $1}')
+            echo "| Размер ISO | ${SIZE} |" >> $GITHUB_STEP_SUMMARY
+            echo "| SHA-256 | \`${SHA}\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| Статус | ✅ Собран успешно |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Статус | ❌ ISO не создан |" >> $GITHUB_STEP_SUMMARY
+          fi
